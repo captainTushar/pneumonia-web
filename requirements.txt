@@ -4,3 +4,4 @@ torchvision
 pillow
 werkzeug
 numpy
+gunicorn
