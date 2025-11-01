@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pneumonia Detector</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            width: 420px;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+            font-size: 28px;
+            color: #333;
+        }
+
+        p {
+            margin-top: 0;
+            color: #777;
+        }
+
+        .upload-box {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #4a90e2;
+            border-radius: 10px;
+            cursor: pointer;
+            color: #4a90e2;
+            font-weight: bold;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: #4a90e2;
+            border: none;
+            padding: 12px 20px;
+            color: white;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #3c7ac0;
+        }
+
+        #preview {
+            width: 100%;
+            margin-top: 20px;
+            display: none;
+            border-radius: 10px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .normal { color: green; }
+        .pneumonia { color: red; }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h2>Pneumonia Detector</h2>
+        <p>Upload a chest X-ray image to detect pneumonia.</p>
+
+        <label for="file-input">
+            <div class="upload-box">Click to upload X-ray</div>
+        </label>
+        <input id="file-input" type="file" accept="image/*">
+
+        <img id="preview">
+
+        <button class="btn" onclick="uploadImage()">Predict</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById("file-input");
+        const preview = document.getElementById("preview");
+        const resultBox = document.getElementById("result");
+
+        fileInput.addEventListener("change", function () {
+            const file = this.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = "block";
+            }
+        });
+
+        function uploadImage() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please upload an image first.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("image", file);
+
+            fetch("/predict", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.prediction === "Pneumonia") {
+                    resultBox.innerHTML = "Prediction: <span class='pneumonia'>Pneumonia</span>";
+                } else {
+                    resultBox.innerHTML = "Prediction: <span class='normal'>Normal</span>";
+                }
+            })
+            .catch(err => {
+                resultBox.innerHTML = "<span style='color:red'>Error processing image.</span>";
+            });
+        }
+    </script>
+
+</body>
+</html>
