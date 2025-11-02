@@ -6,25 +6,30 @@ import os
 
 app = Flask(__name__)
 
-# Ensure uploads folder exists
+
 os.makedirs("uploads", exist_ok=True)
 
-# Device
 device = torch.device("cpu")
 
-# 1️⃣ Create model architecture
-model = models.resnet18(pretrained=False)
-model.fc = torch.nn.Linear(model.fc.in_features, 1)  # binary classification
 
-# 2️⃣ Load the saved state_dict
-state_dict = torch.load("resnet18_pneumonia.pt", map_location=device)
-model.load_state_dict(state_dict)
+model = None
 
-# 3️⃣ Move to device and set to evaluation mode
-model.to(device)
-model.eval()
+def load_model():
+    global model
+    if model is None:
+        model = models.resnet18(pretrained=False)
+        model.fc = torch.nn.Linear(model.fc.in_features, 1)
 
-# Image preprocessing (same as training)
+        state_dict = torch.load("resnet18_pneumonia.pt", map_location=device)
+        model.load_state_dict(state_dict)
+
+        model.to(device)
+        model.eval()
+
+    return model
+
+
+
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -32,9 +37,11 @@ transform = transforms.Compose([
                          [0.229, 0.224, 0.225])
 ])
 
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -43,24 +50,27 @@ def predict():
 
     file = request.files["image"]
 
-    # Save uploaded image
+    
     img_path = os.path.join("uploads", file.filename)
     file.save(img_path)
 
-    # Open and preprocess image
+
     img = Image.open(img_path).convert("RGB")
     img = transform(img).unsqueeze(0).to(device)
 
-    with torch.no_grad():
-        output = model(img)
+    
+    model_loaded = load_model()
 
-    # Binary classification (0 = Normal, 1 = Pneumonia)
+    with torch.no_grad():
+        output = model_loaded(img)
+
     prediction = torch.sigmoid(output).item()
     label = "Pneumonia" if prediction >= 0.5 else "Normal"
 
     return jsonify({"prediction": label})
 
+
+
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
